@@ -1,0 +1,35 @@
+/*
+ * These are already dark, so they go back to their original colors. The filter stays off #navbar
+ * because it would trap the fixed cart panel and flip the light sub-nav and menus inside it.
+ */
+#nav-belt,
+#nav-main,
+#navFooter {
+  filter: var(--dusk-media) !important;
+}
+
+/* The overlays that dim the page behind menus and dialogs are black, which the page filter would turn pale. */
+#nav-cover,
+#a-popover-lgtbox {
+  background-color: #fff !important;
+}
+
+#navbar .nav-search-scope {
+  background-color: #232f3e !important;
+}
+
+#navbar .nav-search-label {
+  color: #d5d9d9 !important;
+}
+
+#navbar .nav-search-field {
+  background-color: #37475a !important;
+}
+
+#navbar .nav-search-field input {
+  color: #fff !important;
+}
+
+#navbar .nav-search-field input::placeholder {
+  color: #c7ccd1 !important;
+}

@@ -1,0 +1,116 @@
+:scope {
+  --dusk-flip: invert(100%) hue-rotate(180deg);
+  --dusk-page: invert(93%) hue-rotate(180deg);
+  /* What media needs to show its own colors where the page flips it. */
+  --dusk-page-media: var(--dusk-flip);
+  --dusk-media: var(--dusk-page-media);
+  /* The dim comes first because after the flip it would lift the darks instead of lowering whites. */
+  --dusk-photo: brightness(80%) var(--dusk-media);
+  /* What a light element needs to end up dark, such as a frame holding a page. The page's flip already does it. */
+  --dusk-page-darken: invert(0%);
+  --dusk-darken: var(--dusk-page-darken);
+  filter: var(--dusk-page) !important;
+}
+
+/*
+ * The canvas behind the page is white unless the site paints it, and it flips to dark with the page. This yields
+ * to the site's own root background, and its off-white tells the script that the site set none.
+ */
+:where(:scope:not([data-dusk-page='dark'])) {
+  background-color: rgb(255 255 254);
+}
+
+/* The script marks a page whose own background is already dark, which keeps its colors. */
+:scope[data-dusk-page='dark'] {
+  --dusk-page: none;
+  /* Unlike none, this still combines with other filters, such as brightness() in a site file. */
+  --dusk-page-media: invert(0%);
+  --dusk-page-darken: var(--dusk-flip);
+}
+
+/* SVG images are mostly logos and icons, which stay legible flipped with the page. */
+img:not([src$='.svg' i], [src*='.svg?' i]),
+[style*='background-image: url'],
+[style*='background-image:url'],
+[style*='background: url'],
+[style*='background:url'] {
+  filter: var(--dusk-photo) !important;
+}
+
+/*
+ * Hovering a photo shows its true brightness. Images on the top layer are left out because the
+ * last rule here shows them as they are.
+ */
+img:not([src$='.svg' i], [src*='.svg?' i], :modal, :popover-open, :fullscreen):hover,
+[style*='background-image: url']:hover,
+[style*='background-image:url']:hover,
+[style*='background: url']:hover,
+[style*='background:url']:hover,
+video,
+canvas,
+embed,
+object,
+iframe {
+  filter: var(--dusk-media) !important;
+}
+
+/*
+ * Media inside an inline-background element flips twice, but don't fix that here. A rule that selects
+ * descendants of [style] re-checks the subtree on every inline style change, which doubled style
+ * time while scrolling Amazon. Site files can fix it with a class-based rule instead.
+ */
+
+/* The top layer renders above the page, so the page's filter never reaches it. */
+:modal,
+:popover-open,
+:fullscreen {
+  filter: var(--dusk-page) !important;
+  --dusk-media: var(--dusk-page-media);
+  --dusk-photo: brightness(80%) var(--dusk-page-media);
+  --dusk-darken: var(--dusk-page-darken);
+}
+
+/*
+ * The script marks parts the site already drew dark, and light parts inside those, and flips them again so they
+ * end up dark too. The value says whether that part now shows its own colors, which media inside then keeps.
+ */
+[data-dusk-flip] {
+  filter: var(--dusk-flip) !important;
+}
+
+/* The top layer skips the page's filter, so an element there that shows its own colors needs none. */
+:is(:modal, :popover-open, :fullscreen)[data-dusk-flip='original'] {
+  filter: invert(0%) !important;
+}
+
+[data-dusk-flip='original'] {
+  --dusk-media: invert(0%);
+  --dusk-photo: brightness(80%);
+  --dusk-darken: var(--dusk-flip);
+}
+
+[data-dusk-flip='inverted'] {
+  --dusk-media: var(--dusk-flip);
+  --dusk-photo: brightness(80%) var(--dusk-flip);
+  --dusk-darken: invert(0%);
+}
+
+/*
+ * The script marks frames that hold a page, such as a widget or a chart, rather than a video, a map or an ad.
+ * Nothing inside another site's frame can be restyled, so the frame darkens like the page around it.
+ */
+iframe[data-dusk-frame='page'] {
+  filter: var(--dusk-darken) !important;
+}
+
+/*
+ * Backdrops dim what is behind them, so they turn black and keep their transparency. The page's
+ * filter would turn a black one pale.
+ */
+::backdrop {
+  filter: brightness(0) !important;
+}
+
+:is(img, video, canvas, embed, object, iframe):is(:modal, :popover-open, :fullscreen) {
+  filter: none !important;
+}

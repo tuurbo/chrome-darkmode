@@ -1,0 +1,19 @@
+{
+  "name": "dusk",
+  "description": "Private, per-site dark mode with no network access.",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "wxt build",
+    "postinstall": "wxt prepare",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\" \"build/**/*.test.ts\"",
+    "test:e2e": "wxt build --mode e2e && node --test --test-timeout=30000 --test-force-exit tests/e2e.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "typescript": "7.0.2",
+    "wxt": "0.21.5"
+  }
+}
