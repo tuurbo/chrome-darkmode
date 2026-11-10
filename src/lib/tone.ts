@@ -1,6 +1,12 @@
 export const FLIP_ATTRIBUTE = 'data-dusk-flip';
 export const PAGE_ATTRIBUTE = 'data-dusk-page';
 export const FRAME_ATTRIBUTE = 'data-dusk-frame';
+export const PHOTO_ATTRIBUTE = 'data-dusk-photo';
+
+// An inline background picture is usually a photo, while stylesheet ones are often icons.
+const INLINE_PICTURE = /background(?:-image)?\s*:\s*url\(/i;
+
+export const hasInlinePicture = (style: string | null) => style !== null && INLINE_PICTURE.test(style);
 
 // Common ad slot sizes. Ads are mostly pictures, so they keep their colors like photos do.
 const AD_SIZES = [

@@ -21,7 +21,7 @@ Check for a bot-check page before changing anything. If a screenshot shows one, 
 
 The default filter flips the whole page, then flips images and video back. Photos are also dimmed to 80% until hovered.
 
-A script, `src/entrypoints/tone.ts`, then reads the site's real colors. It flips back large surfaces the site already drew dark, flips light surfaces inside those again, and does the same for text drawn over something other than its parent, such as a fixed header over a dark section. A page whose own background is already dark isn't flipped at all. Most sites need no file. To see what the script decided, look for `data-dusk-flip` on elements and `data-dusk-page` on the root.
+A script, `src/entrypoints/tone.ts`, then reads the site's real colors. It flips back large surfaces the site already drew dark, flips light surfaces inside those again, and does the same for text drawn over something other than its parent, such as a fixed header over a dark section. A page whose own background is already dark isn't flipped at all. It also marks elements with an inline background picture as photos. Most sites need no file. To see what the script decided, look for `data-dusk-flip`, `data-dusk-photo` and `data-dusk-frame` on elements and `data-dusk-page` on the root.
 
 Site files fix what the script misses, and most fixes change which parts get flipped.
 
@@ -35,7 +35,6 @@ Site files fix what the script misses, and most fixes change which parts get fli
 | A logo vanishes on the dark background | `filter: none !important` on the image |
 | A photo is still too bright | `filter: brightness(60%) var(--dusk-media) !important`. Brightness must come first, or it lifts the darks and leaves whites as bright as before |
 | A photo should not be dimmed | `filter: var(--dusk-media) !important` |
-| An image inside an element with an inline background looks inverted | `filter: none !important` on the image, selected by its class |
 | The whole page should use a hand-written theme | Set `--dusk-page: none !important`, `--dusk-media: none !important`, and `--dusk-photo: brightness(80%) !important` on `:scope`, then write the colors directly |
 
 Rules:
@@ -44,7 +43,7 @@ Rules:
 - Don't load anything external. The build rejects remote `url()`, `@import`, `image-set()`, and similar, even when they only appear in a comment. Embed assets with `data:` if they are needed.
 - Don't add JavaScript. Site files are CSS only.
 - Prefer stable IDs and readable class names. Avoid generated names such as `css-1x2y3z`, which change when a site deploys.
-- Don't select descendants of `[style...]`, and avoid `:has()`. They make every inline style change re-check a subtree, which slows scrolling on script-heavy pages. One such rule doubled style time on Amazon.
+- Don't select on `[style...]` at all, and avoid `:has()`. They make inline style changes re-match the rule, which slows script-driven animation and scrolling. One such rule doubled style time on Amazon, and the base file's own photo selectors made inline animation several times slower before the script took them over.
 - `filter` starts a new stacking context and traps fixed-position children, so check any menus inside an element you filter.
 - The script leaves an element with any `filter` to whatever set it, though it still checks what's inside. `--dusk-media` and `--dusk-photo` follow the script's flips, so `var(--dusk-media)` shows an element's own colors wherever it sits.
 

@@ -37,7 +37,8 @@ const LAYERS_PAGE = `<!doctype html>
 <img src="${WHITE_IMAGE}" style="position:absolute; left:400px; top:320px; display:block">
 <video id="clip" width="100" height="100"></video>
 <dialog id="dark-dialog" class="box" style="background: rgb(12, 13, 18)"></dialog>
-<div id="dark-full" style="background: rgb(12, 13, 18); width: 100px; height: 100px"></div>`;
+<div id="dark-full" style="background: rgb(12, 13, 18); width: 100px; height: 100px"></div>
+<div id="photo-holder" style="position:absolute; left:550px; top:320px; width:100px; height:100px; background-image:url(&quot;${WHITE_IMAGE}&quot;)"><img id="photo-child" src="${RED_IMAGE}" style="display:block; width:50px; height:50px"></div>`;
 
 const SECTIONS_PAGE = `<!doctype html>
 <title>sections</title>
@@ -59,6 +60,17 @@ const SECTIONS_PAGE = `<!doctype html>
 <p id="overlay">Fixed text over the dark section</p>
 <div id="small">Small</div>
 <div id="holder"><div id="pinned"></div></div>`;
+
+const SECTIONS_CV_PAGE = `<!doctype html>
+<title>content visibility</title>
+<style>
+  body { margin: 0; }
+  .lazy { content-visibility: auto; contain-intrinsic-size: auto 300px; }
+  .dark { width: 600px; height: 300px; background: rgb(12, 13, 18); }
+</style>
+<div class="lazy" id="top-section"><div class="dark" id="top-dark"></div></div>
+<div style="height: 4000px"></div>
+<div class="lazy" id="far-section"><div class="dark" id="far-dark"></div></div>`;
 
 const NATIVE_DARK_PAGE = `<!doctype html>
 <title>native dark</title>
@@ -99,6 +111,7 @@ const PAGES: Record<string, string> = {
   '/scheme': SCHEME_PAGE,
   '/layers': LAYERS_PAGE,
   '/sections': SECTIONS_PAGE,
+  '/sections-cv': SECTIONS_CV_PAGE,
   '/native-dark': NATIVE_DARK_PAGE,
   '/dark-root': DARK_ROOT_PAGE,
   '/frames': FRAMES_PAGE,
@@ -203,6 +216,15 @@ test('images keep their colors', async () => {
 test('inline background images keep their colors', async () => {
   const page = await chrome.newPage(`${baseUrl}/layers`);
   assert.ok(isRed(await page.pixel(50, 370)));
+});
+
+test('an image inside an inline background keeps its colors', async () => {
+  const page = await chrome.newPage(`${baseUrl}/layers`);
+  await until(
+    () => page.evaluate(`document.getElementById('photo-holder').hasAttribute('data-dusk-photo')`),
+    'the holder to be marked a photo',
+  );
+  assert.ok(isRed(await page.pixel(575, 345)));
 });
 
 test('photos are dimmed until hovered', async () => {
@@ -371,6 +393,20 @@ test('text drawn over a dark section keeps its light color', async () => {
   await waitForFlip(page, '#overlay', 'original');
 });
 
+test('text added later over a dark section is checked', async () => {
+  const page = await chrome.newPage(`${baseUrl}/sections`);
+  await waitForFlip(page, '#overlay', 'original');
+  await page.evaluate(`{
+    const late = document.createElement('p');
+    late.id = 'late-text';
+    late.style.cssText = 'position:fixed; left:20px; top:60px; margin:0; color:#fff';
+    document.body.append(late);
+  }`);
+  await sleep(200);
+  await page.evaluate(`document.getElementById('late-text').textContent = 'Added later'`);
+  await waitForFlip(page, '#late-text', 'original');
+});
+
 test('small dark elements and sections holding fixed elements are left flipped', async () => {
   const page = await chrome.newPage(`${baseUrl}/sections`);
   await waitForFlip(page, '#dark', 'original');
@@ -388,6 +424,15 @@ test('a dark section added later is found', async () => {
     document.body.append(late);
   }`);
   await waitForFlip(page, '#late', 'original');
+});
+
+test('a dark section inside a content-visibility section is found once shown', async () => {
+  const page = await chrome.newPage(`${baseUrl}/sections-cv`);
+  await waitForFlip(page, '#top-dark', 'original');
+  await sleep(300);
+  assert.equal(await flip(page, '#far-dark'), null);
+  await page.evaluate('document.getElementById("far-section").scrollIntoView()');
+  await waitForFlip(page, '#far-dark', 'original');
 });
 
 test('a page that is already dark is not inverted', async () => {

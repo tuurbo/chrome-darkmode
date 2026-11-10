@@ -28,12 +28,13 @@
   --dusk-page-darken: var(--dusk-flip);
 }
 
-/* SVG images are mostly logos and icons, which stay legible flipped with the page. */
+/*
+ * SVG images are mostly logos and icons, which stay legible flipped with the page. The script marks elements
+ * with an inline background picture, because a selector on the style attribute would make every inline style
+ * change re-match it, which made script-driven animation several times slower.
+ */
 img:not([src$='.svg' i], [src*='.svg?' i]),
-[style*='background-image: url'],
-[style*='background-image:url'],
-[style*='background: url'],
-[style*='background:url'] {
+[data-dusk-photo] {
   filter: var(--dusk-photo) !important;
 }
 
@@ -42,10 +43,7 @@ img:not([src$='.svg' i], [src*='.svg?' i]),
  * last rule here shows them as they are.
  */
 img:not([src$='.svg' i], [src*='.svg?' i], :modal, :popover-open, :fullscreen):hover,
-[style*='background-image: url']:hover,
-[style*='background-image:url']:hover,
-[style*='background: url']:hover,
-[style*='background:url']:hover,
+[data-dusk-photo]:hover,
 video,
 canvas,
 embed,
@@ -55,10 +53,14 @@ iframe {
 }
 
 /*
- * Media inside an inline-background element flips twice, but don't fix that here. A rule that selects
- * descendants of [style] re-checks the subtree on every inline style change, which doubled style
- * time while scrolling Amazon. Site files can fix it with a class-based rule instead.
+ * What's inside a photo's element shows its own colors and dimming with it, so media there needs no flip or
+ * dimming of its own.
  */
+[data-dusk-photo] > * {
+  --dusk-media: invert(0%);
+  --dusk-photo: invert(0%);
+  --dusk-darken: var(--dusk-flip);
+}
 
 /* The top layer renders above the page, so the page's filter never reaches it. */
 :modal,
