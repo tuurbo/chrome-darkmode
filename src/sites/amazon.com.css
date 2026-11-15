@@ -33,3 +33,38 @@
 #navbar .nav-search-field input::placeholder {
   color: #c7ccd1 !important;
 }
+
+/*
+ * Ads fade until hovered. Opacity multiplies down nested elements, so each selector names only the outermost
+ * part of an ad, and the parts that can sit inside another ad are left out there.
+ *
+ * .AdHolder: sponsored search results, brand banners and display ads in search results.
+ * .ape-wrapper, .ape-placement: display ads, such as the banner at the bottom of an order. A wrapper holds the
+ * ad and its "Sponsored" label side by side; a placement without one holds its own label.
+ * sponsoredProducts: the sponsored carousels on product pages.
+ * .sb-desktop, .sbx-desktop, .sbv-video-single-product, slot_sptw-: sponsored brand cards, videos and widgets.
+ */
+.AdHolder,
+.ape-wrapper:not(.AdHolder *),
+.ape-placement:not(.ape-wrapper > *, .AdHolder *),
+[id^='sims-sponsoredProducts'],
+[id^='sponsoredProducts'],
+.sb-desktop:not(.AdHolder *),
+.sbx-desktop:not(.AdHolder *),
+.sbv-video-single-product:not(.AdHolder *),
+[class*='slot_sptw-']:not(.AdHolder *) {
+  opacity: 0.3 !important;
+  transition: opacity 0.2s !important;
+}
+
+.AdHolder:hover,
+.ape-wrapper:hover,
+.ape-placement:hover,
+[id^='sims-sponsoredProducts']:hover,
+[id^='sponsoredProducts']:hover,
+.sb-desktop:hover,
+.sbx-desktop:hover,
+.sbv-video-single-product:hover,
+[class*='slot_sptw-']:hover {
+  opacity: 1 !important;
+}
