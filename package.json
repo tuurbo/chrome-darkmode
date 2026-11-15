@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "wxt build",
+    "zip": "wxt zip",
     "postinstall": "wxt prepare",
     "typecheck": "wxt prepare && tsc --noEmit",
     "test": "node --test \"src/**/*.test.ts\" \"build/**/*.test.ts\"",
