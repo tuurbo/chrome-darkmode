@@ -2,7 +2,7 @@
   "name": "dusk",
   "description": "Private, per-site dark mode with no network access.",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "build": "wxt build",
