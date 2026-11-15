@@ -13,11 +13,27 @@
 }
 
 /*
- * The canvas behind the page is white unless the site paints it, and it flips to dark with the page. This yields
- * to the site's own root background, and its off-white tells the script that the site set none.
+ * The canvas behind the page is white unless the site paints it, and it flips to dark with the page. Until a page
+ * draws its first frame, as when a tab opened in the background is first shown, Chrome fills the tab with the root's
+ * background color as set, without the flip. So the color is the dark the page ends up as, and the off-white that
+ * flips into it is drawn as an image, which the fill leaves out. The image is sized to the window, since one sized
+ * to the root isn't drawn when the root has no height, such as when everything in it is positioned. Both yield to the
+ * site's own root background, and tell the script that the site set none.
  */
 :where(:scope:not([data-dusk-page='dark'])) {
+  background-color: rgb(17 18 18);
+  background-image: linear-gradient(rgb(255 255 254), rgb(255 255 254));
+  background-size: 100vw 100vh;
+}
+
+/* The script marks a root the site gives only a color, which the off-white would cover, or only an image. */
+:where(:scope[data-dusk-own-root='color']:not([data-dusk-page='dark'])) {
+  background-image: none;
+}
+
+:where(:scope[data-dusk-own-root='image']:not([data-dusk-page='dark'])) {
   background-color: rgb(255 255 254);
+  background-size: auto;
 }
 
 /* The script marks a page whose own background is already dark, which keeps its colors. */

@@ -1,6 +1,8 @@
 import { OFF_ATTRIBUTE } from '@/lib/site';
 import {
   average,
+  BARE_ROOT_COLOR,
+  BARE_ROOT_IMAGE,
   composite,
   contrast,
   FLIP_ATTRIBUTE,
@@ -9,11 +11,12 @@ import {
   hasInlinePicture,
   inversions,
   looksLikePage,
+  OFF_WHITE,
+  OWN_ROOT_ATTRIBUTE,
   PAGE_ATTRIBUTE,
   parseRgb,
   PHOTO_ATTRIBUTE,
   toneOf,
-  UNPAINTED_ROOT,
   WHITE,
   type Color,
 } from '@/lib/tone';
@@ -63,7 +66,7 @@ const TOP_LAYER = ':modal, :popover-open, :fullscreen';
 const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 const COLOR_STYLES = /(?:^|;)\s*(?:background(?:-color|-image)?|color|filter|display|position|-webkit-text-fill-color)\s*:[^;]*/gi;
 const COLOR_TRANSITIONS = /color|background|filter/;
-const OWN_ATTRIBUTES = new Set([FLIP_ATTRIBUTE, PAGE_ATTRIBUTE, FRAME_ATTRIBUTE, PHOTO_ATTRIBUTE]);
+const OWN_ATTRIBUTES = new Set([FLIP_ATTRIBUTE, PAGE_ATTRIBUTE, FRAME_ATTRIBUTE, PHOTO_ATTRIBUTE, OWN_ROOT_ATTRIBUTE]);
 
 type Mark = 'original' | 'inverted';
 
@@ -332,7 +335,19 @@ function measurePage(): Page {
     const surface = surfaceOf(getComputedStyle(element));
     if (surface && surface !== 'image') color = composite(surface, color);
   };
-  if (getComputedStyle(root).backgroundColor !== UNPAINTED_ROOT) paint(root);
+  const rootStyle = getComputedStyle(root);
+  const ownImage = rootStyle.backgroundImage !== 'none' && rootStyle.backgroundImage !== BARE_ROOT_IMAGE;
+  const ownColor = ![TRANSPARENT, BARE_ROOT_COLOR, OFF_WHITE].includes(rootStyle.backgroundColor);
+  // When the site sets only one of the two, the other dark.css part has to make way, which the mark tells it.
+  const own = ownColor === ownImage ? null : ownColor ? 'color' : 'image';
+  if (root.getAttribute(OWN_ROOT_ATTRIBUTE) !== own) {
+    if (own) root.setAttribute(OWN_ROOT_ATTRIBUTE, own);
+    else root.removeAttribute(OWN_ROOT_ATTRIBUTE);
+  }
+  // The off-white dark.css draws over a site's own color goes once the mark is in.
+  const fill = own === 'color' ? readColor(rootStyle.backgroundColor) : null;
+  if (fill) color = composite(fill, color);
+  else if (ownImage) paint(root);
   paint(document.body);
   const minWidth = root.clientWidth * PAGE_COVERAGE;
   let parent: Element = document.body;

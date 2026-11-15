@@ -1,11 +1,23 @@
 /*
  * These are already dark, so they go back to their original colors. The filter stays off #navbar
- * because it would trap the fixed cart panel and flip the light sub-nav and menus inside it.
+ * because it would trap the fixed cart panel and flip the light sub-nav and menus inside it. Some
+ * visits get a white footer instead, which the page's flip already darkens. It shows while the page
+ * above it loads, so restoring it would flash white.
  */
 #nav-belt,
 #nav-main,
-#navFooter {
+#navFooter:not(.navFooterTheme-white) {
   filter: var(--dusk-media) !important;
+}
+
+/*
+ * The script took #navbar's own dark background for a dark section and flipped it back until it reached the fixed
+ * cart panel inside, which showed the sub-nav and sign-in popup in their light colors for a moment as a tab was
+ * shown. White, which the page's flip darkens, keeps the script off it, and only shows where the bars inside leave
+ * gaps.
+ */
+#navbar {
+  background-color: #fff !important;
 }
 
 /* The overlays that dim the page behind menus and dialogs are black, which the page filter would turn pale. */

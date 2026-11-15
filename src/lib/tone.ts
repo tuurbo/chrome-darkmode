@@ -2,6 +2,7 @@ export const FLIP_ATTRIBUTE = 'data-dusk-flip';
 export const PAGE_ATTRIBUTE = 'data-dusk-page';
 export const FRAME_ATTRIBUTE = 'data-dusk-frame';
 export const PHOTO_ATTRIBUTE = 'data-dusk-photo';
+export const OWN_ROOT_ATTRIBUTE = 'data-dusk-own-root';
 
 // An inline background picture is usually a photo, while stylesheet ones are often icons.
 const INLINE_PICTURE = /background(?:-image)?\s*:\s*url\(/i;
@@ -40,8 +41,15 @@ export type Tone = 'dark' | 'mid' | 'light';
 
 export const WHITE: Color = [255, 255, 255, 1];
 
-/** dark.css paints a root the site leaves bare in this off-white, which tells it apart from a site's own white. */
-export const UNPAINTED_ROOT = 'rgb(255, 255, 254)';
+/*
+ * dark.css gives a root the site leaves bare this dark color, which Chrome fills the tab with until the page's first
+ * frame, and draws an off-white image over it, which the page filter turns into the same dark. These tell the script
+ * that the site set none.
+ */
+export const BARE_ROOT_COLOR = 'rgb(17, 18, 18)';
+export const BARE_ROOT_IMAGE = 'linear-gradient(rgb(255, 255, 254), rgb(255, 255, 254))';
+/** The color dark.css gives a root the site sets only an image on, where the image is clear. */
+export const OFF_WHITE = 'rgb(255, 255, 254)';
 
 // #595959 and #a0a0a0. Colors between them, such as most brand blues, read fine either way.
 const DARK_LUMINANCE = 0.1;
