@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="manifest.open_in_tab" content="true" />
+    <title>Dusk settings</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        accent-color: #f5b301;
+        font: 15px/1.5 system-ui, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: Canvas;
+        color: CanvasText;
+      }
+
+      main {
+        max-width: 30rem;
+        margin: 56px auto;
+        padding: 0 16px;
+      }
+
+      h1 {
+        margin: 0 0 32px;
+        font-size: 22px;
+      }
+
+      .level {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 12px;
+        margin: 0 0 28px;
+      }
+
+      .level label {
+        font-weight: 600;
+      }
+
+      .level output {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .level input,
+      .level p {
+        grid-column: 1 / -1;
+      }
+
+      .level input {
+        width: 100%;
+        margin: 4px 0;
+      }
+
+      .level p {
+        margin: 0;
+        color: color-mix(in srgb, CanvasText 65%, Canvas);
+      }
+
+      button {
+        font: inherit;
+        padding: 6px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Dusk</h1>
+      <form>
+        <div class="level">
+          <label for="brightness">Page brightness</label>
+          <output for="brightness"></output>
+          <input id="brightness" name="brightness" type="range" />
+          <p>How bright pages look once Dusk darkens them. Pages that were already dark keep their own colors.</p>
+        </div>
+        <div class="level">
+          <label for="photos">Image brightness</label>
+          <output for="photos"></output>
+          <input id="photos" name="photos" type="range" />
+          <p>How bright photos look until you point at them. 100% leaves them undimmed.</p>
+        </div>
+        <div class="level">
+          <label for="hover">Image brightness on hover</label>
+          <output for="hover"></output>
+          <input id="hover" name="hover" type="range" />
+          <p>How bright a photo gets while you point at it. Set it to match image brightness to keep photos dimmed.</p>
+        </div>
+        <button id="reset" type="button">Reset to defaults</button>
+      </form>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

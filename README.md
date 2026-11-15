@@ -8,6 +8,10 @@
 
 Chrome runs the extension from that folder, so don't delete or move it.
 
+## Settings
+
+Click the Dusk icon to turn dark mode on or off for the site you're on. To change how bright darkened pages and photos look, right-click the icon and choose **Options**.
+
 ## Update
 
 Chrome does not update unpacked extensions on its own.

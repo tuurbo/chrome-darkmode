@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { LEVEL_NAMES, LEVELS, levelFile, levelValues, type LevelName } from '../src/lib/settings.ts';
 import { OFF_ATTRIBUTE } from '../src/lib/site.ts';
 
 const BASE_CSS = 'src/dark.css';
@@ -74,13 +75,18 @@ export function scopeCss(css: string): string {
   return `@media screen {\n@scope (html:not([${OFF_ATTRIBUTE}])) {\n${css}\n}\n}\n`;
 }
 
-function checkedCss(path: string): string {
+function checkedCss(path: string, prefix = ''): string {
   const css = readFileSync(path, 'utf8');
   const found = findExternalReferences(css);
   if (found.length) throw new Error(`${path} may not load anything external: ${found.join(', ')}`);
   if (usesRootSelector(css)) throw new Error(`${path} must use :scope instead of html or :root`);
-  return scopeCss(css);
+  return scopeCss(prefix + css);
 }
+
+const levelDeclaration = (name: LevelName, value: number) => `  ${LEVELS[name].property}: brightness(${value}%);\n`;
+
+// The defaults sit under :where(), so a level file wins over them whichever loads first.
+const LEVEL_DEFAULTS = `:where(:scope) {\n${LEVEL_NAMES.map((name) => levelDeclaration(name, LEVELS[name].initial)).join('')}}\n\n`;
 
 export function listSites(sitesDir: string): string[] {
   if (!existsSync(sitesDir)) return [];
@@ -92,10 +98,16 @@ export function listSites(sitesDir: string): string[] {
 
 export function styleAssets(sitesDir: string) {
   return [
-    { relativeDest: 'dark.css', contents: checkedCss(BASE_CSS) },
+    { relativeDest: 'dark.css', contents: checkedCss(BASE_CSS, LEVEL_DEFAULTS) },
     ...listSites(sitesDir).map((site) => ({
       relativeDest: `sites/${site}.css`,
       contents: checkedCss(join(sitesDir, `${site}.css`)),
     })),
+    ...LEVEL_NAMES.flatMap((name) =>
+      levelValues(name).map((value) => ({
+        relativeDest: levelFile(name, value),
+        contents: scopeCss(`:scope {\n${levelDeclaration(name, value)}}\n`),
+      })),
+    ),
   ];
 }

@@ -227,18 +227,22 @@ test('an image inside an inline background keeps its colors', async () => {
   assert.ok(isRed(await page.pixel(575, 345)));
 });
 
+const near = (actual: number, expected: number) => Math.abs(actual - expected) <= 12;
+// A white photo on the layers page: 80% dimmed, then flipped with the page.
+const photoBrightness = async (page: Page) => (await page.pixel(450, 370))[0];
+const hoverPhoto = (page: Page) => page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 450, y: 370 });
+
 test('photos are dimmed until hovered', async () => {
   const page = await chrome.newPage(`${baseUrl}/layers`);
-  const brightness = async () => (await page.pixel(450, 370))[0];
 
-  const dimmed = await brightness();
+  const dimmed = await photoBrightness(page);
   assert.ok(dimmed > 180 && dimmed < 205, `dimmed white was ${dimmed}`);
 
-  await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 450, y: 370 });
-  await until(async () => (await brightness()) > 225, 'the hovered photo to brighten');
+  await hoverPhoto(page);
+  await until(async () => (await photoBrightness(page)) > 225, 'the hovered photo to brighten');
 
   await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 700, y: 500 });
-  await until(async () => (await brightness()) < 205, 'the photo to dim again');
+  await until(async () => (await photoBrightness(page)) < 205, 'the photo to dim again');
 });
 
 test('video is not dimmed', async () => {
@@ -246,6 +250,53 @@ test('video is not dimmed', async () => {
   const filter = await page.evaluate<string>(`getComputedStyle(document.getElementById('clip')).filter`);
   assert.match(filter, /invert/);
   assert.doesNotMatch(filter, /brightness/);
+});
+
+async function openOptions(): Promise<Page> {
+  const options = await chrome.newPage(`chrome-extension://${extensionId}/options.html`);
+  await until(() => options.evaluate(`document.querySelector('output').value !== ''`), 'the options page to show the settings');
+  return options;
+}
+
+async function setLevel(options: Page, name: string, value: number) {
+  await options.evaluate(`(() => {
+    const slider = document.querySelector('input[name="${name}"]');
+    slider.value = '${value}';
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+    slider.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+}
+
+test('the options page sets how bright pages and photos are in open and new tabs', async () => {
+  const open = await chrome.newPage(`${baseUrl}/layers`);
+  assert.ok(near(await photoBrightness(open), 193), `default photo was ${await photoBrightness(open)}`);
+
+  const options = await openOptions();
+  await setLevel(options, 'brightness', 50);
+  await until(async () => near(await photoBrightness(open), 96), 'the open page to dim');
+  const next = await chrome.newPage(`${baseUrl}/layers`);
+  assert.ok(near(await photoBrightness(next), 96), `photo on a new page was ${await photoBrightness(next)}`);
+
+  await setLevel(options, 'brightness', 100);
+  await setLevel(options, 'photos', 100);
+  await until(async () => near(await photoBrightness(open), 237), 'the photo to stop dimming');
+
+  assert.equal(await options.evaluate(`document.querySelector('output[for="photos"]').value`), '100%');
+  await options.evaluate(`document.getElementById('reset').click()`);
+  await until(async () => near(await photoBrightness(open), 193), 'the defaults to come back');
+  const last = await chrome.newPage(`${baseUrl}/layers`);
+  assert.ok(near(await photoBrightness(last), 193), `photo after reset was ${await photoBrightness(last)}`);
+});
+
+test('the options page sets how bright a hovered photo gets', async () => {
+  const page = await chrome.newPage(`${baseUrl}/layers`);
+  const options = await openOptions();
+  await setLevel(options, 'hover', 60);
+  await hoverPhoto(page);
+  await until(async () => near(await photoBrightness(page), 149), 'the hovered photo to show the hover level');
+
+  await options.evaluate(`document.getElementById('reset').click()`);
+  await until(async () => near(await photoBrightness(page), 237), 'the hovered photo to show its true brightness');
 });
 
 test('dialogs darken with the page', async () => {
@@ -520,6 +571,20 @@ test('a site that was turned off stays off on the next load', async () => {
   const page = await chrome.newPage(`${baseUrl}/`);
   assert.ok(isWhite(await background(page)));
   assert.equal(await page.evaluate('window.filterAtFirstScript'), 'none');
+});
+
+// The layers page scrolls, so its scrollbar covers the corner the page background is usually read from.
+test('turning a site on uses the levels already set', async () => {
+  const options = await openOptions();
+  await setLevel(options, 'brightness', 50);
+  const page = await chrome.newPage(`${baseUrl}/layers`);
+  await click(page);
+  await until(async () => near(await photoBrightness(page), 96), 'the page to darken at the set brightness');
+
+  await options.evaluate(`document.getElementById('reset').click()`);
+  await until(async () => near(await photoBrightness(page), 193), 'the defaults to come back');
+  await click(page);
+  await until(async () => (await photoBrightness(page)) === 255, 'the page to turn light');
 });
 
 test('turning a site on finds dark sections in a page that is already open', async () => {

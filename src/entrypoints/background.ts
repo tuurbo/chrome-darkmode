@@ -1,3 +1,4 @@
+import { levelFiles, loadSettings, readSettings, SETTINGS_KEY, type Settings } from '@/lib/settings';
 import { covers, matchPattern, OFF_ATTRIBUTE, siteFilesFor, siteFromUrl, urlConditions } from '@/lib/site';
 
 declare const __SITE_CSS__: string[];
@@ -6,6 +7,7 @@ const SITES_KEY = 'sites';
 const ICON_COLOR = '#f5b301';
 // Finds parts of the page that were already dark, which CSS alone cannot see.
 const TONE_SCRIPT = '/tone.js';
+const LEVELS_SCRIPT = 'levels';
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -63,10 +65,11 @@ async function syncRegistrations() {
   const access = await Promise.all(sites.map((site) => browser.permissions.contains({ origins: [matchPattern(site)] })));
   const enabled = sites.filter((_, index) => access[index]);
   if (enabled.length !== sites.length) await saveSites(enabled);
+  const settings = await loadSettings();
 
   await browser.scripting.unregisterContentScripts();
-  await browser.scripting.registerContentScripts(
-    enabled.flatMap((site) => [
+  await browser.scripting.registerContentScripts([
+    ...enabled.flatMap((site) => [
       { id: `site-${site}`, matches: [matchPattern(site)], css: cssFiles(site), js: [TONE_SCRIPT], runAt: 'document_start' as const },
       // A file for one of the site's subdomains loads there on top of the site's own files.
       ...subdomainFiles(site).map((file) => ({
@@ -76,24 +79,62 @@ async function syncRegistrations() {
         runAt: 'document_start' as const,
       })),
     ]),
-  );
+    // The levels register by themselves, so a settings change updates only this entry.
+    ...(enabled.length > 0
+      ? [{ id: LEVELS_SCRIPT, matches: enabled.map(matchPattern), css: levelFiles(settings), runAt: 'document_start' as const }]
+      : []),
+  ]);
   await syncIconRules(enabled);
+}
+
+async function forEachTab(urls: string[], task: (tabId: number, url?: string) => Promise<void>) {
+  const tabs = await browser.tabs.query({ url: urls });
+  const results = await Promise.allSettled(tabs.map((tab) => task(tab.id!, tab.url)));
+  for (const result of results) if (result.status === 'rejected') console.warn(result.reason);
 }
 
 function setOffMarker(attribute: string, off: boolean) {
   document.documentElement.toggleAttribute(attribute, off);
 }
 
+/*
+ * Each level file goes in by itself, so it can come out by itself when that level changes. Chrome can't remove one
+ * a registered content script applied, but a file inserted later wins over it, since both set the same property
+ * with the same specificity. Level files set different properties, so they don't need to go in in any order.
+ */
+async function setTabLevels(tabId: number, stale: string[], current: string[]) {
+  const target = { tabId };
+  await Promise.all([...stale, ...current].map((file) => browser.scripting.removeCSS({ target, files: [file] })));
+  await Promise.all(current.map((file) => browser.scripting.insertCSS({ target, files: [file] })));
+}
+
 // Chrome cannot remove CSS that a registered content script applied, so turning a loaded page
 // off relies on the marker that all of the stylesheets are scoped to.
-async function setTabDark(tabId: number, host: string, dark: boolean) {
+async function setTabDark(tabId: number, host: string, dark: boolean, levels: string[]) {
   const target = { tabId };
   if (dark) {
-    await browser.scripting.removeCSS({ target, files: cssFiles(host) });
-    await browser.scripting.insertCSS({ target, files: cssFiles(host) });
+    const files = cssFiles(host);
+    await Promise.all([
+      browser.scripting.removeCSS({ target, files }).then(() => browser.scripting.insertCSS({ target, files })),
+      setTabLevels(tabId, [], levels),
+    ]);
   }
   await browser.scripting.executeScript({ target, func: setOffMarker, args: [OFF_ATTRIBUTE, !dark] });
   if (dark) await browser.scripting.executeScript({ target, files: [TONE_SCRIPT] });
+}
+
+async function applySettings(previous: Settings, next: Settings) {
+  const before = levelFiles(previous);
+  const after = levelFiles(next);
+  const current = after.filter((file, index) => file !== before[index]);
+  if (current.length === 0) return;
+  // It's registered only while a site is dark, and matches every dark site.
+  const [registered] = await browser.scripting.getRegisteredContentScripts({ ids: [LEVELS_SCRIPT] });
+  if (!registered) return;
+
+  await browser.scripting.updateContentScripts([{ id: LEVELS_SCRIPT, css: after }]);
+  const stale = before.filter((file, index) => file !== after[index]);
+  await forEachTab(registered.matches ?? [], (tabId) => setTabLevels(tabId, stale, current));
 }
 
 async function toggleSite(clicked: string) {
@@ -108,9 +149,8 @@ async function toggleSite(clicked: string) {
   await syncRegistrations();
 
   const origins = [matchPattern(site)];
-  const tabs = await browser.tabs.query({ url: origins });
-  const results = await Promise.allSettled(tabs.map((tab) => setTabDark(tab.id!, siteFromUrl(tab.url) ?? site, dark)));
-  for (const result of results) if (result.status === 'rejected') console.warn(result.reason);
+  const levels = levelFiles(await loadSettings());
+  await forEachTab(origins, (tabId, url) => setTabDark(tabId, siteFromUrl(url) ?? site, dark, levels));
 
   if (!dark) await browser.permissions.remove({ origins }).catch(console.warn);
 }
@@ -128,4 +168,8 @@ export default defineBackground(() => {
   });
   browser.runtime.onInstalled.addListener(() => enqueue(syncRegistrations));
   browser.permissions.onRemoved.addListener(() => enqueue(syncRegistrations));
+  browser.storage.local.onChanged.addListener((changes) => {
+    const change = changes[SETTINGS_KEY];
+    if (change) enqueue(() => applySettings(readSettings(change.oldValue), readSettings(change.newValue)));
+  });
 });

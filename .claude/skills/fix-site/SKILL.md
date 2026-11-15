@@ -19,7 +19,7 @@ Check for a bot-check page before changing anything. If a screenshot shows one, 
 
 ## Writing the CSS
 
-The default filter flips the whole page, then flips images and video back. Photos are also dimmed to 80% until hovered.
+The default filter flips the whole page, then flips images and video back. Photos are also dimmed until hovered. The user sets these levels on the options page: `--dusk-brightness` (default `brightness(100%)`) is the last step of `--dusk-page`, `--dusk-photo-dim` (default `brightness(80%)`) dims photos, and `--dusk-photo-hover` (default `brightness(100%)`) is how bright a hovered photo gets. Screenshots use the defaults.
 
 A script, `src/entrypoints/tone.ts`, then reads the site's real colors. It flips back large surfaces the site already drew dark, flips light surfaces inside those again, and does the same for text drawn over something other than its parent, such as a fixed header over a dark section. A page whose own background is already dark isn't flipped at all. It also marks elements with an inline background picture as photos. Most sites need no file. To see what the script decided, look for `data-dusk-flip`, `data-dusk-photo` and `data-dusk-frame` on elements and `data-dusk-page` on the root.
 
@@ -35,7 +35,7 @@ Site files fix what the script misses, and most fixes change which parts get fli
 | A logo vanishes on the dark background | `filter: none !important` on the image |
 | A photo is still too bright | `filter: brightness(60%) var(--dusk-media) !important`. Brightness must come first, or it lifts the darks and leaves whites as bright as before |
 | A photo should not be dimmed | `filter: var(--dusk-media) !important` |
-| The whole page should use a hand-written theme | Set `--dusk-page: none !important`, `--dusk-media: none !important`, and `--dusk-photo: brightness(80%) !important` on `:scope`, then write the colors directly |
+| The whole page should use a hand-written theme | Set `--dusk-page: none !important`, `--dusk-media: invert(0%) !important`, and `--dusk-photo: var(--dusk-photo-dim) !important` on `:scope`, then write the colors directly. `--dusk-media` must stay a filter function rather than `none`, because Dusk and site files put other filters in front of it |
 
 Rules:
 

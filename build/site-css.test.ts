@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { findExternalReferences, scopeCss, usesRootSelector } from './site-css.ts';
+import { LEVEL_NAMES, LEVELS, levelFile, levelValues } from '../src/lib/settings.ts';
+import { findExternalReferences, scopeCss, styleAssets, usesRootSelector } from './site-css.ts';
 
 test('plain rules and embedded data pass', () => {
   const svg = `.a { color: red; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>") }`;
@@ -67,4 +68,19 @@ test('scopeCss gates every rule on the off marker and the screen', () => {
     scopeCss('.a { color: red }'),
     '@media screen {\n@scope (html:not([data-dusk-off])) {\n.a { color: red }\n}\n}\n',
   );
+});
+
+test('every level the options page offers is built, scoped like the other files, with its default in dark.css', () => {
+  const assets = new Map(styleAssets('tests/fixtures/sites').map((asset) => [asset.relativeDest, asset.contents]));
+  const defaults = assets.get('dark.css')!.match(/:where\(:scope\) \{([^}]*)\}/)?.[1] ?? '';
+  for (const name of LEVEL_NAMES) {
+    const { property, initial } = LEVELS[name];
+    assert.ok(defaults.includes(`${property}: brightness(${initial}%);`), `${property} default`);
+    for (const value of levelValues(name)) {
+      const css = assets.get(levelFile(name, value));
+      assert.ok(css, levelFile(name, value));
+      assert.ok(css.includes('@scope (html:not([data-dusk-off]))'), levelFile(name, value));
+      assert.ok(css.includes(`:scope {\n  ${property}: brightness(${value}%);\n}`), levelFile(name, value));
+    }
+  }
 });

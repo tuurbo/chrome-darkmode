@@ -1,11 +1,17 @@
+/*
+ * --dusk-brightness, --dusk-photo-dim and --dusk-photo-hover are the levels the options page sets. The build adds
+ * their defaults, and the extension loads a file for each chosen level that overrides them.
+ */
 :scope {
   --dusk-flip: invert(100%) hue-rotate(180deg);
-  --dusk-page: invert(93%) hue-rotate(180deg);
+  --dusk-page: invert(93%) hue-rotate(180deg) var(--dusk-brightness);
+  /* What the page's filter does to colors it shows as they are, which is only its brightness. */
+  --dusk-page-brightness: var(--dusk-brightness);
   /* What media needs to show its own colors where the page flips it. */
   --dusk-page-media: var(--dusk-flip);
   --dusk-media: var(--dusk-page-media);
   /* The dim comes first because after the flip it would lift the darks instead of lowering whites. */
-  --dusk-photo: brightness(80%) var(--dusk-media);
+  --dusk-photo: var(--dusk-photo-dim) var(--dusk-media);
   /* What a light element needs to end up dark, such as a frame holding a page. The page's flip already does it. */
   --dusk-page-darken: invert(0%);
   --dusk-darken: var(--dusk-page-darken);
@@ -39,6 +45,7 @@
 /* The script marks a page whose own background is already dark, which keeps its colors. */
 :scope[data-dusk-page='dark'] {
   --dusk-page: none;
+  --dusk-page-brightness: invert(0%);
   /* Unlike none, this still combines with other filters, such as brightness() in a site file. */
   --dusk-page-media: invert(0%);
   --dusk-page-darken: var(--dusk-flip);
@@ -55,11 +62,14 @@ img:not([src$='.svg' i], [src*='.svg?' i]),
 }
 
 /*
- * Hovering a photo shows its true brightness. Images on the top layer are left out because the
- * last rule here shows them as they are.
+ * Hovering a photo shows it at the hover level, which is its true brightness unless the user lowers it. Images on
+ * the top layer are left out because the last rule here shows them as they are, at the page's brightness.
  */
 img:not([src$='.svg' i], [src*='.svg?' i], :modal, :popover-open, :fullscreen):hover,
-[data-dusk-photo]:hover,
+[data-dusk-photo]:hover {
+  filter: var(--dusk-photo-hover) var(--dusk-media) !important;
+}
+
 video,
 canvas,
 embed,
@@ -75,6 +85,7 @@ iframe {
 [data-dusk-photo] > * {
   --dusk-media: invert(0%);
   --dusk-photo: invert(0%);
+  --dusk-photo-hover: brightness(100%);
   --dusk-darken: var(--dusk-flip);
 }
 
@@ -84,7 +95,7 @@ iframe {
 :fullscreen {
   filter: var(--dusk-page) !important;
   --dusk-media: var(--dusk-page-media);
-  --dusk-photo: brightness(80%) var(--dusk-page-media);
+  --dusk-photo: var(--dusk-photo-dim) var(--dusk-page-media);
   --dusk-darken: var(--dusk-page-darken);
 }
 
@@ -96,20 +107,23 @@ iframe {
   filter: var(--dusk-flip) !important;
 }
 
-/* The top layer skips the page's filter, so an element there that shows its own colors needs none. */
+/*
+ * The top layer skips the page's filter, so an element there that shows its own colors needs no flip, only the
+ * brightness the page has.
+ */
 :is(:modal, :popover-open, :fullscreen)[data-dusk-flip='original'] {
-  filter: invert(0%) !important;
+  filter: var(--dusk-page-brightness) !important;
 }
 
 [data-dusk-flip='original'] {
   --dusk-media: invert(0%);
-  --dusk-photo: brightness(80%);
+  --dusk-photo: var(--dusk-photo-dim);
   --dusk-darken: var(--dusk-flip);
 }
 
 [data-dusk-flip='inverted'] {
   --dusk-media: var(--dusk-flip);
-  --dusk-photo: brightness(80%) var(--dusk-flip);
+  --dusk-photo: var(--dusk-photo-dim) var(--dusk-flip);
   --dusk-darken: invert(0%);
 }
 
@@ -129,6 +143,7 @@ iframe[data-dusk-frame='page'] {
   filter: brightness(0) !important;
 }
 
+/* Media shown on the top layer by itself has the brightness it would have inside a fullscreen wrapper. */
 :is(img, video, canvas, embed, object, iframe):is(:modal, :popover-open, :fullscreen) {
-  filter: none !important;
+  filter: var(--dusk-page-brightness) !important;
 }
